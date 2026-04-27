@@ -94,6 +94,7 @@ setInterval(() => {
     }
 }, 30000)
 
+// 🔴 SAFE TEXT EXTRACTOR - INASOMA FORMATS ZOTE ZA WHATSAPP
 const getText = (msg) => {
   return msg?.conversation || msg?.extendedTextMessage?.text || msg?.imageMessage?.caption || msg?.videoMessage?.caption || msg?.documentMessage?.caption || msg?.buttonsResponseMessage?.selectedButtonId || msg?.listResponseMessage?.singleSelectReply?.selectedRowId || msg?.templateButtonReplyMessage?.selectedId || ""
 }
@@ -125,7 +126,7 @@ async function startBot() {
             retryRequestDelayMs: 250
         })
 
-        // 🔥 SMART BACKUP
+        // 🔥 SMART BACKUP - ONLY WHEN CREDS UPDATE
         sock.ev.on("creds.update", async () => {
             try {
                 await saveCreds()
@@ -141,7 +142,24 @@ async function startBot() {
 
         // 🚨 SECURITY MESSAGE - ADMIN TU
         function securityMessage() {
-            return `🚨 SECURITY ALERT - ACCESS DENIED 🚨\n\nSAMAHANI MKUU BOT HII NI YA VIONGOZI PEKEE\n\n╔══════════╗\n║ 🛡️ SYSTEM: SECURED AND FULLY ACTIVE 🛡️ ║\n║ ⚠️ VIOLATION: UNAUTHORIZED ACCESS ⚠️ ║\n║ 🔒 THREAT LEVEL: DETECTED AND BLOCKED 🔒 ║\n║ 🔥 FIREWALL: MAXIMUM PROTECTION 🔥 ║\n╚══════════╝\n\n⛔ TAHADHARI KUU ⛔\nUmejaribu kutoa amri kwa bot bila kuwa Admin wa group.\nSystem ya usalama imeku-detect na kukublock moja kwa moja.\n\n🔐 AMRI ZINARUHUSIWA KWA GROUP ADMINS TU 🔐\n\n KYC SECURITY PROTOCOL V5.0 - ALWAYS ACTIVE`
+            return `🚨 SECURITY ALERT - ACCESS DENIED 🚨
+
+SAMAHANI MKUU BOT HII NI YA VIONGOZI PEKEE
+
+╔══════════╗
+║ 🛡️ SYSTEM: SECURED AND FULLY ACTIVE 🛡️ ║
+║ ⚠️ VIOLATION: UNAUTHORIZED ACCESS ⚠️ ║
+║ 🔒 THREAT LEVEL: DETECTED AND BLOCKED 🔒 ║
+║ 🔥 FIREWALL: MAXIMUM PROTECTION 🔥 ║
+╚══════════╝
+
+⛔ TAHADHARI KUU ⛔
+Umejaribu kutoa amri kwa bot bila kuwa Admin wa group.
+System ya usalama imeku-detect na kukublock moja kwa moja.
+
+🔐 AMRI ZINARUHUSIWA KWA GROUP ADMINS TU 🔐
+
+ KYC SECURITY PROTOCOL V5.0 - ALWAYS ACTIVE`
         }
 
         async function isAdmin(groupJid, userJid) {
@@ -239,7 +257,7 @@ async function startBot() {
             if (connection === "open") {
                 console.log("✅ BOT ONLINE")
                 isStarting = false
-                reconnectCount = 0 // RESET COUNT WAKATI UMEFANIKIWA
+                reconnectCount = 0
             }
 
             if (connection === "close") {
@@ -264,7 +282,7 @@ async function startBot() {
                     process.exit(1)
                 }
 
-                // 🚫 Zuia multiple connections - IMPORTANT FIX
+                // 🚫 Zuia multiple connections
                 reconnectCount++
                 if (reconnectCount > MAX_RECONNECTS) {
                     console.log("❌ Too many reconnects, stopping bot to prevent loop");
@@ -295,6 +313,7 @@ async function startBot() {
             }
         })
 
+        // 🔴 MESSAGES HANDLER - SAFI NA KAMILI
         sock.ev.on("messages.upsert", async ({ messages }) => {
             try {
                 const msg = messages[0]
@@ -314,24 +333,33 @@ async function startBot() {
 
                     // 🔐 HIZI COMMAND NI ZA ADMIN TU
                     if (cmd === "ping") {
-                        if (!(await isAdmin(from, sender))) return await sock.sendMessage(from, { text: securityMessage() }, { quoted: msg })
+                        if (!(await isAdmin(from, sender))) {
+                            return await sock.sendMessage(from, { text: securityMessage() }, { quoted: msg })
+                        }
                         await sock.sendMessage(from, { text: "⚡ NAAM MKUU KAHENYA ACTIVE 24/7 ⚡" }, { quoted: msg })
                     }
 
                     if (cmd === "ratiba" &&!args[1]) {
-                        if (!(await isAdmin(from, sender))) return await sock.sendMessage(from, { text: securityMessage() }, { quoted: msg })
+                        if (!(await isAdmin(from, sender))) {
+                            return await sock.sendMessage(from, { text: securityMessage() }, { quoted: msg })
+                        }
                         const leo = new Date()
                         const siku = MAJINA_YA_SIKU[leo.getDay()]
                         const tarehe = leo.getDate()
                         const mwezi = MIEZI[leo.getMonth()]
                         const mwaka = leo.getFullYear()
+
+                        // ✅ FIX: Chukua ratiba ya siku ya leo tu
                         const ratibaLeo = RATIBA_ZOTE || "❌ Hakuna ratiba ya siku hii"
+
                         const ujumbe = `📅 *RATIBA YA LEO* 📅\n\n🗓️ *SIKU:* ${siku}\n📆 *TAREHE:* ${tarehe} ${mwezi} ${mwaka}\n\n━━━━━━━━━━\n\n${ratibaLeo}\n\n━━━━━━━━━━\n\n💖 LOVE MATCH ZONE 💖`
                         await sock.sendMessage(from, { text: ujumbe }, { quoted: msg })
                     }
 
                     if (cmd === "ratiba" && args[1] === "full") {
-                        if (!(await isAdmin(from, sender))) return await sock.sendMessage(from, { text: securityMessage() }, { quoted: msg })
+                        if (!(await isAdmin(from, sender))) {
+                            return await sock.sendMessage(from, { text: securityMessage() }, { quoted: msg })
+                        }
                         try {
                             const metadata = await sock.groupMetadata(from)
                             const jinaGroup = metadata.subject
@@ -343,7 +371,9 @@ async function startBot() {
                     }
 
                     if (cmd === "ongeza") {
-                        if (!(await isAdmin(from, sender))) return await sock.sendMessage(from, { text: securityMessage() }, { quoted: msg })
+                        if (!(await isAdmin(from, sender))) {
+                            return await sock.sendMessage(from, { text: securityMessage() }, { quoted: msg })
+                        }
                         const num = args[1]
                         if (!num) return await sock.sendMessage(from, { text: "⚠️ Weka namba sahihi\nMfano: -ongeza 255785319842" }, { quoted: msg })
                         if (num.length < 10 || num.length > 15) return await sock.sendMessage(from, { text: "❌ Namba sio sahihi" }, { quoted: msg })
@@ -357,7 +387,9 @@ async function startBot() {
                     }
 
                     if (cmd === "ondoa") {
-                        if (!(await isAdmin(from, sender))) return await sock.sendMessage(from, { text: securityMessage() }, { quoted: msg })
+                        if (!(await isAdmin(from, sender))) {
+                            return await sock.sendMessage(from, { text: securityMessage() }, { quoted: msg })
+                        }
                         const num = args[1]
                         if (!num) return await sock.sendMessage(from, { text: "⚠️ Weka namba sahihi\nMfano: -ondoa 255785319842" }, { quoted: msg })
                         if (num.length < 10 || num.length > 15) return await sock.sendMessage(from, { text: "❌ Namba sio sahihi" }, { quoted: msg })
@@ -371,6 +403,7 @@ async function startBot() {
                     }
                 }
 
+                // COMMANDS BILA PREFIX
                 if (text.toLowerCase() === "hi") await sock.sendMessage(from, { text: "👋 Bot iko live!" }, { quoted: msg })
                 if (text.toLowerCase() === "test") await sock.sendMessage(from, { text: "✅ BOT IKO LIVE NA INASOMA MESSAGES" }, { quoted: msg })
 
