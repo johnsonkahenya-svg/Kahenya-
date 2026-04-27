@@ -1,12 +1,52 @@
-const { default: makeWASocket, 
-    useMultiFileAuthState, 
-    fetchLatestBaileysVersion, 
+const fs = require("fs-extra") // ✅ FS-EXTRA JUU KABISA - SIO FS YA KAWAIDA
+
+// 4. AUTO RESTORE KAMA SESSION IMEPOTEA - JUU KABLA YA BOT KUANZA
+if (!fs.existsSync("./session")) {
+  if (fs.existsSync("./session-backup")) {
+    fs.copySync("./session-backup", "./session")
+    console.log("♻️ Session restored from backup")
+  }
+}
+
+const { default: makeWASocket,
+    useMultiFileAuthState,
+    fetchLatestBaileysVersion,
     DisconnectReason
 } = require("@whiskeysockets/baileys")
 
 const pino = require("pino")
 
+// 1. 🔁 ANTI-CRASH YA NGUYU ZAIDI - JUU KABISA
+process.on("uncaughtException", err => {
+  console.log("ERROR:", err)
+})
+
+process.on("unhandledRejection", err => {
+  console.log("REJECTION:", err)
+})
+
 let phoneNumber = "255785319842" // WEKA NAMBA YAKO
+let isStarting = false // 2. PREVENT MULTIPLE BOT INSTANCES
+const SESSION_FOLDER = "./session"
+const BACKUP_FOLDER = "./session-backup"
+
+// CREATE SESSION FOLDER KAMA HAIPO
+if (!fs.existsSync(SESSION_FOLDER)) {
+    fs.mkdirSync(SESSION_FOLDER, { recursive: true })
+    console.log("📁 SESSION FOLDER IMEUNDWA")
+}
+
+// 3. AUTO BACKUP KILA DAKIKA 1
+setInterval(async () => {
+  try {
+    if (await fs.pathExists(SESSION_FOLDER)) {
+      await fs.copy(SESSION_FOLDER, BACKUP_FOLDER)
+      console.log("💾 Session backup saved")
+    }
+  } catch (err) {
+    console.log("Backup error:", err)
+  }
+}, 60000) // every 60 seconds
 
 // ================= RATIBA ZA LOVE MATCH ZONE =================
 const RATIBA_ZOTE = {
@@ -22,7 +62,7 @@ const RATIBA_ZOTE = {
 
     "Jumamosi": `SATURDAY – MATCH DAY 💞\n\nKutafuta match & connection za kweli 💌\nTafuta anayekupenda kwa makubaliano, heshima na utulivu — usilazimishe mapenzi 💫`,
 
-    "Jumapili": `SUNDAY – BLESSINGS DAY 🙏\n\nShukrani, baraka na ujumbe wa moyo 💖\nKila mtu atashare mafanikio yake ya wiki nzima kulingana na malengo yake 🌟`
+    "Jumapili": `SUNDAY – BLESSINGS DAY 🙏\nShukrani, baraka na ujumbe wa moyo 💖\nKila mtu atashare mafanikio yake ya wiki nzima kulingana na malengo yake 🌟`
 }
 
 const RATIBA_FULL = `
@@ -79,37 +119,34 @@ let sock
 let restartAttempts = 0
 const MAX_RESTART_ATTEMPTS = 999
 
-// ================= ANTI-CRASH SYSTEM =================
-process.on("uncaughtException", (err) => {
-    console.log("🔥 UNCAUGHT EXCEPTION:", err.message)
-    console.log("⚡ INARESTART AUTOMATICALLY NDANI YA SEKUNDE 3...")
-    restartAttempts++
-    setTimeout(() => {
-        startBot()
-    }, 3000)
-})
-
-process.on("unhandledRejection", (reason, promise) => {
-    console.log("🔥 UNHANDLED REJECTION:", reason)
-    console.log("⚡ INARESTART AUTOMATICALLY NDANI YA SEKUNDE 3...")
-    restartAttempts++
-    setTimeout(() => {
-        startBot()
-    }, 3000)
-})
-
+// 3. 💾 MEMORY PROTECTION - ZUIA BOT KUFA GHAFLA
 setInterval(() => {
-    if (global.gc) {
-        global.gc()
-        console.log("🧹 RAM imesafishwa - Bot inaendelea strong")
+    const used = process.memoryUsage().heapUsed / 1024 / 1024
+    console.log(`📊 RAM USED: ${Math.round(used)} MB`)
+
+    if (used > 500) { // adjust kama unataka
+        console.log("⚠️ RAM kubwa sana, restart inafanyika...")
+        process.exit(1)
     }
-}, 30 * 60 * 1000)
+}, 60000)
+
+// 4. ❤️ KEEP BOT ALIVE (HEARTBEAT SYSTEM)
+setInterval(() => {
+    if (!sock ||!sock.user) {
+        console.log("⚠️ Bot offline detected, restarting...")
+        isStarting = false
+        startBot()
+    }
+}, 30000)
 
 async function startBot() {
+    if (isStarting) return // 2. PREVENT MULTIPLE BOT INSTANCES
+    isStarting = true
+
     try {
         console.log(`🚀 KUANZISHA BOT - Jaribio la ${restartAttempts + 1}`)
 
-        const { state, saveCreds } = await useMultiFileAuthState("./session")
+        const { state, saveCreds } = await useMultiFileAuthState(SESSION_FOLDER)
         const { version } = await fetchLatestBaileysVersion()
 
         sock = makeWASocket({
@@ -268,23 +305,21 @@ System ya usalama imeku-detect na kukublock moja kwa moja.
             }
 
             if (connection === "open") {
-                console.log("✅ CONNECTED SUCCESSFULLY - ANTI-CRASH ACTIVE")
+                console.log("✅ BOT ONLINE")
+                isStarting = false
                 restartAttempts = 0
             }
 
             if (connection === "close") {
-                let reason = lastDisconnect?.error?.output?.statusCode
+                const reason = lastDisconnect?.error?.output?.statusCode
 
-                console.log("❌ Connection closed:", reason)
+                console.log("❌ CONNECTION CLOSED:", reason)
 
-                if (reason!== DisconnectReason.loggedOut) {
-                    console.log("⚡ INARESTART AUTOMATICALLY NDANI YA SEKUNDE 5...")
-                    setTimeout(() => {
-                        startBot()
-                    }, 5000)
-                } else {
-                    console.log("🔒 LOGGED OUT - Tafadhali scan QR tena")
-                }
+                isStarting = false
+
+                setTimeout(() => {
+                    startBot()
+                }, 5000)
             }
         })
 
@@ -374,7 +409,6 @@ System ya usalama imeku-detect na kukublock moja kwa moja.
                     const mwezi = MIEZI[leo.getMonth()]
                     const mwaka = leo.getFullYear()
 
-                    // HAPA NDIO NIMEFIX - SASA INATOA RATIBA SAHI YA SIKU
                     const ratibaLeo = RATIBA_ZOTE[siku] || "❌ Hakuna ratiba ya siku hii"
 
                     const ujumbe = `
@@ -454,11 +488,12 @@ ${ratibaLeo}
         })
 
     } catch (err) {
-        console.log("🔥 BOT CRASH ERROR:", err.message)
-        console.log("⚡ INARESTART NDANI YA SEKUNDE 3...")
+        console.log("🔥 ERROR:", err)
+        isStarting = false
+
         setTimeout(() => {
             startBot()
-        }, 3000)
+        }, 5000)
     }
 }
 
